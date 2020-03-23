@@ -1,0 +1,3 @@
+https://github.com/beoutbreakprepared/nCoV2019
+https://www.kaggle.com/kimjihoo/coronavirusdataset/data
+https://github.com/CSSEGISandData/COVID-19
