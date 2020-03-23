@@ -7,6 +7,7 @@ import sys
 import datetime
 from dateutil import parser
 import csv
+import matplotlib.pyplot as plt
 
 root = tk.Tk()
 root.withdraw()
@@ -229,6 +230,7 @@ class Virus_Predictor :
             male_age_key.append([0, 0])
             female_age_key.append([0, 0])
 
+
         #Get total numbers
         for row in self.patient_list :
             if row[1] != "NA" :
@@ -248,29 +250,30 @@ class Virus_Predictor :
                         female_age_key[age][1] += 1
                         avg_mortality[1] += 1
         
-        avg_age_percentile = [i/sum(avg_age_percentile) for i in avg_age_percentile]
-        avg_mortality = [i/sum(avg_mortality) for i in avg_mortality]
-
+        print(avg_age_percentile)
+        print(avg_mortality)
+        avg_age_percentile = [i/len(male_age_key) for i in avg_age_percentile]
+        avg_mortality = [i/len(male_age_key) for i in avg_mortality]
+        print(avg_age_percentile)
+        print(avg_mortality)
         for i in range(self.maximum_age + 1) :
-            if male_age_key[i][0] != 0 and male_age_key[i][0] != None :
+            if male_age_key[i][0] != 0 :
                 male_age_key[i][0] = male_age_key[i][0]/avg_age_percentile[0]
-            else :
-                male_age_key[i][0] = None
-
-            if male_age_key[i][1] != 0 and male_age_key[i][1] != None :
+ 
+            if male_age_key[i][1] != 0 :
                 male_age_key[i][1] = male_age_key[i][1]/avg_mortality[0]
-            else :
-                male_age_key[i][1] = None
 
-            if female_age_key[i][0] != 0 and female_age_key[i][0] != None :
+            if female_age_key[i][0] != 0 :
                 female_age_key[i][0] = female_age_key[i][0]/avg_age_percentile[1]
-            else :
-                female_age_key[i][0] = None
 
-            if female_age_key[i][1] != 0 and female_age_key[i][1] != None :
+            if female_age_key[i][1] != 0 :
                 female_age_key[i][1] = female_age_key[i][1]/avg_mortality[1]
-            else :
-                female_age_key[i][1] = None
+
+        #Normalize to zero
+        for i in range(self.maximum_age + 1) :
+            male_age_key[i] = [male_age_key[i][0] - 1, male_age_key[i][1] - 1]
+            female_age_key[i] = [female_age_key[i][0] - 1, female_age_key[i][1] - 1]
+        
         print("\nSaving calculator key as csv in root dir...")
         
         with open(self.root_dir.replace("/", "\\") + "\\female_calculator_data.csv", "w", newline='') as target :
@@ -287,9 +290,57 @@ class Virus_Predictor :
 
         return male_age_key, female_age_key
 
-    def regress_data(self) :
-        pass
+    def build_regression_model(self, male_age_key = None, female_age_key = None) :
+        if male_age_key == None or female_age_key == None :
+            print("Age keys not provided, reading from files...")
 
+            with open(self.root_dir.replace("/", "\\") + "\\male_calculator_data.csv", "r", newline='') as target :
+                male_age_key = [row for row in csv.reader(target)]
+            with open(self.root_dir.replace("/", "\\") + "\\female_calculator_data.csv", "r", newline='') as target :
+                female_age_key = [row for row in csv.reader(target)]
+            
+            print("Done!")
+        male_range = [[i for i in range(len(male_age_key))], [float(value[0]) for value in male_age_key]]
+        female_range = [[i for i in range(len(female_age_key))], [float(value[0]) for value in female_age_key]]
+
+        male_hosp_fit = np.poly1d(np.polyfit(male_range[0], male_range[1], 5))
+        female_hosp_fit = np.poly1d(np.polyfit(female_range[0], female_range[1], 5))
+
+        xp = np.linspace(0, 120, 500)
+        
+        hosp = plt.figure(1)
+        _ = plt.plot(male_range[0], male_range[1], '.', xp, female_hosp_fit(xp), '-', xp, male_hosp_fit(xp), '--')
+        plt.ylim([-1.5, 1.5])
+
+        male_range = [[i for i in range(len(male_age_key))], [float(value[1]) for value in male_age_key]]
+        female_range = [[i for i in range(len(female_age_key))], [float(value[1]) for value in female_age_key]]
+        
+        male_death_fit = np.poly1d(np.polyfit(male_range[0], male_range[1], 4))
+        female_death_fit = np.poly1d(np.polyfit(female_range[0], female_range[1], 4))
+        
+        death = plt.figure(2)
+        _ = plt.plot(male_range[0], male_range[1], '.', xp, female_death_fit(xp), '-', xp, male_death_fit(xp), '--')
+        plt.ylim([-1.5, 1.5])
+        plt.show()
+        input()
+        print("\nSaving regressed calculator key as csv in root dir...")
+        
+        plt.clf()
+        regressed_male_age_key = [[male_hosp_fit(i), male_death_fit(i)] for i in range(len(male_age_key))]
+        regressed_female_age_key = [[female_hosp_fit(i), female_death_fit(i)] for i in range(len(female_age_key))]
+
+        with open(self.root_dir.replace("/", "\\") + "\\regressed_female_calculator_data.csv", "w", newline='') as target :
+            csv_writer = csv.writer(target, dialect='excel')
+
+            csv_writer.writerows(regressed_female_age_key)
+        print("Saved female age key...")
+
+        with open(self.root_dir.replace("/", "\\") + "\\regressed_male_calculator_data.csv", "w", newline='') as target :
+            csv_writer = csv.writer(target, dialect='excel')
+
+            csv_writer.writerows(regressed_male_age_key)
+        print("Saved male age key...")
+        return regressed_male_age_key, regressed_female_age_key
 class Outside_Variables :
     def __init__(self, UBI_amount, percent_cities_lockdown) :
         self.UBI_amount = UBI_amount
@@ -298,5 +349,6 @@ class Outside_Variables :
 
 if __name__ == "__main__":
     predictor = Virus_Predictor()
-    predictor.get_data_patients()
-    male_age_key, female_age_key = predictor.build_calculator_data()
+    #predictor.get_data_patients()
+    #male_age_key, female_age_key = predictor.build_calculator_data()
+    clean_male_age_key, clean_female_age_key = predictor.build_regression_model()
