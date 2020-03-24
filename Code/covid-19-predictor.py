@@ -252,27 +252,38 @@ class Virus_Predictor :
         
         print(avg_age_percentile)
         print(avg_mortality)
-        avg_age_percentile = [i/len(male_age_key) for i in avg_age_percentile]
-        avg_mortality = [i/len(male_age_key) for i in avg_mortality]
+
+        highest_percentile = [max([i[0] for i in male_age_key]), max([i[0] for i in female_age_key])]
+
+        highest_mortality = [max([i[1] for i in male_age_key]), max([i[1] for i in female_age_key])]
+
+
+        avg_age_percentile = [100/i for i in highest_percentile]
+        avg_mortality = [100/i for i in highest_mortality]
+
         print(avg_age_percentile)
         print(avg_mortality)
         for i in range(self.maximum_age + 1) :
-            if male_age_key[i][0] != 0 :
-                male_age_key[i][0] = male_age_key[i][0]/avg_age_percentile[0]
- 
-            if male_age_key[i][1] != 0 :
-                male_age_key[i][1] = male_age_key[i][1]/avg_mortality[0]
-
-            if female_age_key[i][0] != 0 :
-                female_age_key[i][0] = female_age_key[i][0]/avg_age_percentile[1]
-
-            if female_age_key[i][1] != 0 :
-                female_age_key[i][1] = female_age_key[i][1]/avg_mortality[1]
-
+            if male_age_key[i][0] > 0 :
+                male_age_key[i][0] = male_age_key[i][0] * avg_age_percentile[0]
+            else :
+                male_age_key[i][0] = 0 
+            if male_age_key[i][1] > 0 :
+                male_age_key[i][1] = male_age_key[i][1] * avg_mortality[0]
+            else :
+                male_age_key[i][1] = 0
+            if female_age_key[i][0] > 0 :
+                female_age_key[i][0] = female_age_key[i][0] * avg_age_percentile[1]
+            else :
+                female_age_key[i][0] = 0
+            if female_age_key[i][1] > 0 :
+                female_age_key[i][1] = female_age_key[i][1] * avg_mortality[1]
+            else :
+                female_age_key[i][1] = 0
         #Normalize to zero
         for i in range(self.maximum_age + 1) :
-            male_age_key[i] = [male_age_key[i][0] - 1, male_age_key[i][1] - 1]
-            female_age_key[i] = [female_age_key[i][0] - 1, female_age_key[i][1] - 1]
+            male_age_key[i] = [male_age_key[i][0], male_age_key[i][1]]
+            female_age_key[i] = [female_age_key[i][0], female_age_key[i][1]]
         
         print("\nSaving calculator key as csv in root dir...")
         
@@ -306,26 +317,29 @@ class Virus_Predictor :
         male_hosp_fit = np.poly1d(np.polyfit(male_range[0], male_range[1], 5))
         female_hosp_fit = np.poly1d(np.polyfit(female_range[0], female_range[1], 5))
 
+        '''
+        Just some code to plot a graph of the data
+
         xp = np.linspace(0, 120, 500)
         
         hosp = plt.figure(1)
-        _ = plt.plot(male_range[0], male_range[1], '.', xp, female_hosp_fit(xp), '-', xp, male_hosp_fit(xp), '--')
+        _ = plt.plot( xp, female_hosp_fit(xp), '-', xp, male_hosp_fit(xp), '--')
         plt.ylim([-1.5, 1.5])
 
         male_range = [[i for i in range(len(male_age_key))], [float(value[1]) for value in male_age_key]]
         female_range = [[i for i in range(len(female_age_key))], [float(value[1]) for value in female_age_key]]
         
-        male_death_fit = np.poly1d(np.polyfit(male_range[0], male_range[1], 4))
-        female_death_fit = np.poly1d(np.polyfit(female_range[0], female_range[1], 4))
+        male_death_fit = np.poly1d(np.polyfit(male_range[0], male_range[1], 2))
+        female_death_fit = np.poly1d(np.polyfit(female_range[0], female_range[1], 2))
         
         death = plt.figure(2)
-        _ = plt.plot(male_range[0], male_range[1], '.', xp, female_death_fit(xp), '-', xp, male_death_fit(xp), '--')
+        _ = plt.plot( xp, female_death_fit(xp), '-', xp, male_death_fit(xp), '--')
         plt.ylim([-1.5, 1.5])
-        plt.show()
-        input()
+        plt.draw()
+        plt.clf()'''
+
         print("\nSaving regressed calculator key as csv in root dir...")
         
-        plt.clf()
         regressed_male_age_key = [[male_hosp_fit(i), male_death_fit(i)] for i in range(len(male_age_key))]
         regressed_female_age_key = [[female_hosp_fit(i), female_death_fit(i)] for i in range(len(female_age_key))]
 
@@ -340,6 +354,7 @@ class Virus_Predictor :
 
             csv_writer.writerows(regressed_male_age_key)
         print("Saved male age key...")
+
         return regressed_male_age_key, regressed_female_age_key
 class Outside_Variables :
     def __init__(self, UBI_amount, percent_cities_lockdown) :
@@ -349,6 +364,6 @@ class Outside_Variables :
 
 if __name__ == "__main__":
     predictor = Virus_Predictor()
-    #predictor.get_data_patients()
-    #male_age_key, female_age_key = predictor.build_calculator_data()
+    predictor.get_data_patients()
+    male_age_key, female_age_key = predictor.build_calculator_data()
     clean_male_age_key, clean_female_age_key = predictor.build_regression_model()
