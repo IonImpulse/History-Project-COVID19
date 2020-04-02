@@ -61,7 +61,7 @@ class Virus_Predictor :
         self.root_dir = os.path.dirname(os.path.realpath(__file__))
         
         if "data.config" not in os.listdir(self.root_dir) :
-            self.inital_setup()
+            self.initial_setup()
 
         with open(self.root_dir.replace("/", "\\") + "\\data.config", "r") as target :
             self.config_data = target.readlines()
@@ -80,7 +80,7 @@ class Virus_Predictor :
             elif focus == 1 : 
                 self.total_paths.append(eval(path))
 
-    def inital_setup(self) :
+    def initial_setup(self) :
         print("Running first-time setup...\nSelect data directory:")
         data_dir = filedialog.askdirectory()
         
@@ -147,7 +147,7 @@ class Virus_Predictor :
             for data_file in folder[2] :
                 with open(folder[0] + "\\" + data_file, "r", encoding="utf8") as target :
                     inputDataRaw = [row for row in csv.reader(target)]
-
+                print("Total injested patients in " + str(data_file) + " is " + str(len(inputDataRaw)))
                 #Find each column
                 sex_column = -1
                 birth_year_column = -1
@@ -265,7 +265,6 @@ class Virus_Predictor :
                     self.patient_list.append(temp_list)
         
                     patient_counting_num += 1
-        print("Total workable patients: " + str(len(self.patient_list)))
 
 
     def build_calculator_data(self) :
@@ -296,13 +295,14 @@ class Virus_Predictor :
                         male_age_key[age][1] += 1
                         avg_mortality[0] += 1
 
-                else :
+                elif row[0] == "female" :
                     female_age_key[age][0] += 1
                     avg_age_percentile[1] += 1
                     if row[3] != "alive" :
                         female_age_key[age][1] += 1
                         avg_mortality[1] += 1
         
+        print(str(sum(avg_age_percentile)) + " out of " + str(len(self.patient_list)) + " are workable.")
         print(avg_age_percentile)
         print(avg_mortality)
         print(male_age_key)
