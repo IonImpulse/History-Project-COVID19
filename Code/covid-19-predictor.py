@@ -8,6 +8,7 @@ import datetime
 from dateutil import parser
 import csv
 import matplotlib.pyplot as plt
+import json
 
 root = tk.Tk()
 root.withdraw()
@@ -39,7 +40,12 @@ def reject_outliers(data):
     
     return data
 
-    
+def is_int(test) :
+    try :
+        test = int(test)
+        return True
+    except Exception as e :
+        return False
 
 def reject_outliers_double(data):
     data1 = reject_outliers([i[0] for i in data])
@@ -209,15 +215,19 @@ class Virus_Predictor :
                 for index, row in enumerate(inputDataRaw) :
                     #Add sex
                     temp_list = [row[sex_column]]
-                    
+                    age = "NA"
                     #Add age
                     if birth_or_age == "age" :
                         if row[age_column] != "NA" and row[age_column] != "" :
                             try:
                                 if len(row[age_column].replace(" ", "").split("-")) == 1 :
                                     age = float(row[age_column].replace(" ", "").split("-")[0])
-                            except Exception as e:
-                                age = np.mean([float(i) for i in row[age_column].replace(" ", "").split("-")])
+                            except Exception as e :
+                                try :
+                                    age = np.mean([float(i) for i in row[age_column].replace(" ", "").split("-")])
+                                except Exception as i :
+                                    age = 0
+
                         else :
                             age = "NA"
 
@@ -229,8 +239,6 @@ class Virus_Predictor :
                                 age = now.year - float(row[birth_year_column])
                             except Exception as e:
                                 age = now.year - np.mean([float(i) for i in row[birth_year_column].replace(" ", "").split("-")])
-                            if age > self.maximum_age :
-                                self.maximum_age = int(math.floor(age))
                             self.patients_with_age += 1
                         else :
                             age = "NA"
@@ -238,10 +246,10 @@ class Virus_Predictor :
                         temp_list.append(age)
 
 
-                    #Add confirmed date (it's not the fastest way, but hey, it works)
+                    #Add if died
                     if row[confirmed_column] != "NA" and row[confirmed_column] != "" :
                         try :
-                            temp_list.append(parser.parse(row[confirmed_column].replace(" ", "").split("-")[0]))
+                            temp_list.append(True)
                         except Exception as e :
                             temp_list.append("NA")
                     else :
@@ -250,7 +258,7 @@ class Virus_Predictor :
                     #Add deceased state/date
                     if death_or_outcome == "death" :
                         if row[deceased_column] != "NA" and row[deceased_column] != "" :
-                            death_date = parser.parse(row[deceased_column])
+                            death_date = "deceased"
 
                         else :
                             death_date = "alive"
@@ -269,7 +277,7 @@ class Virus_Predictor :
 
     def build_calculator_data(self) :
         demographic_data = [0.015480710565472237, 0.01600938138167091, 0.016488033460649854, 0.016668191058116386, 0.016582092920010373, 0.016718267637079127, 0.016617103601374927, 0.016142310583201397, 0.01646126547179076, 0.015676210577199465, 0.017432822572523096, 0.015351416573085681, 0.016780613830692844, 0.01567486705650703, 0.01601731987623109, 0.016606282155822112, 0.01615526967462983, 0.01585409767120876, 0.017536981398989602, 0.01569129518276287, 0.019111516778628882, 0.01628200536032497, 0.01702119090014364, 0.01625317322168848, 0.015951645472958798, 0.017691107824178057, 0.015481061861556534, 0.015011901391881228, 0.016594743010270536, 0.0142682830224133, 0.018080169955384653, 0.013687568302710026, 0.014691867302803082, 0.013188290689249236, 0.013661893010674107, 0.01717581602872825, 0.014269294871800816, 0.013691367580071154, 0.014896751136858193, 0.013547396536933973, 0.017795345205435097, 0.013086880940845902, 0.013976065584190418, 0.012013583780866699, 0.01241283189378097, 0.015617995024589371, 0.01249145891512483, 0.01253400023962469, 0.012035404085426337, 0.009689008286461048, 0.0132381509349783, 0.009553000379724183, 0.010330284358809139, 0.010040292862622268, 0.009814862645451986, 0.0117623119567084, 0.009794479166093545, 0.008977737621800225, 0.009231169659056694, 0.0082761044686114, 0.010914186353425111, 0.007902120310007825, 0.007520234930789011, 0.006917963901512924, 0.006596523538582924, 0.00812941991902471, 0.006036021065303686, 0.005534213587328426, 0.005541593302797043, 0.0052417702019299395, 0.0069225948359554635, 0.0047155348630203014, 0.00437931439209353, 0.004059374278795312, 0.0039236239885132446, 0.004409499204115823, 0.0035042401038712034, 0.0032011358543007655, 0.0029871641919806654, 0.0027399271913362915, 0.0032894201474501002, 0.002286644814555681, 0.002091345533293794, 0.0018019261860650515, 0.0015992299864705322, 0.0016450521110464033, 0.0012591326809988875, 0.0010739897055252452, 0.0009150584633972578, 0.0007770358246808851, 0.0007768490718100189, 0.000522984250301821, 0.0004158093101009065, 0.0003211215109347836, 0.00025414559189193905, 0.00022069275343813974, 0.00015056896256160192, 0.00010915183637998213, 8.330278236337397e-05, 5.082140818853615e-05, 2.1168499350088563e-06, 1.4968061903176837e-06, 1.1685184336882117e-06, 8.203042578399553e-07, 4.6910111910888134e-07, 2.841175273611667e-07, 1.6406085156799106e-07, 1.0378343343116844e-07, 5.2638957436288634e-08, 3.935467795709907e-08]
-        
+        self.maximum_age = 109
         #Male, female
         avg_age_percentile = [0, 0]
         avg_mortality = [0, 0]
@@ -288,19 +296,20 @@ class Virus_Predictor :
             if row[1] != "NA" :
                 age = int(math.floor(row[1]))
 
-                if row[0] == "male" :
-                    male_age_key[age][0] += 1
-                    avg_age_percentile[0] += 1
-                    if row[3] != "alive" :
-                        male_age_key[age][1] += 1
-                        avg_mortality[0] += 1
+                if age < 110 :
+                    if row[0] == "male" :
+                        male_age_key[age][0] += 1
+                        avg_age_percentile[0] += 1
+                        if row[3] != "alive" :
+                            male_age_key[age][1] += 1
+                            avg_mortality[0] += 1
 
-                elif row[0] == "female" :
-                    female_age_key[age][0] += 1
-                    avg_age_percentile[1] += 1
-                    if row[3] != "alive" :
-                        female_age_key[age][1] += 1
-                        avg_mortality[1] += 1
+                    elif row[0] == "female" :
+                        female_age_key[age][0] += 1
+                        avg_age_percentile[1] += 1
+                        if row[3] != "alive" :
+                            female_age_key[age][1] += 1
+                            avg_mortality[1] += 1
         
         print(str(sum(avg_age_percentile)) + " out of " + str(len(self.patient_list)) + " are workable.")
         print(avg_age_percentile)
@@ -413,6 +422,7 @@ class Virus_Predictor :
             regressed_male_age_key[i] = [regressed_male_age_key[i][0] * avg_age_percentile[0], regressed_male_age_key[i][1] * avg_mortality[0]]
             regressed_female_age_key[i] = [regressed_female_age_key[i][0] * avg_age_percentile[1], regressed_female_age_key[i][1] * avg_mortality[1]]
 
+        #Export CSV files
         with open(self.root_dir.replace("/", "\\") + "\\regressed_female_calculator_data.csv", "w", newline='') as target :
             csv_writer = csv.writer(target, dialect='excel')
 
@@ -424,6 +434,22 @@ class Virus_Predictor :
 
             csv_writer.writerows(regressed_male_age_key)
         print("Saved male age key...")
+
+
+        #Export JSON file
+
+        export_dict = {"male":{}, "female":{}}
+
+        for index, key in enumerate(regressed_male_age_key) :
+            export_dict["male"][index] = key
+
+        
+        for index, key in enumerate(regressed_female_age_key) :
+            export_dict["female"][index] = key
+
+
+        with open(self.root_dir.replace("/", "\\") + "\\age-key.json", 'w', encoding='utf-8') as f:
+            json.dump(export_dict, f, ensure_ascii=False, indent=4)
 
         return regressed_male_age_key, regressed_female_age_key
 class Outside_Variables :
